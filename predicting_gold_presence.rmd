@@ -11,3 +11,4 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ##Introduction  
 
+I will predict gold presence from other minerals
