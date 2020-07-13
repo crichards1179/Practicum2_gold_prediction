@@ -12,3 +12,40 @@ knitr::opts_chunk$set(echo = TRUE)
 ##Introduction  
 
 I will predict gold presence from other minerals
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+```
+
+```{r}
+dn <- read.csv("deadwoodnorth.csv")
+ds <- read.csv("deadwoodsouth.csv")
+ld <- read.csv("lead.csv")
+#tn <- read_csv("tinton.csv")
+#sp <- read_csv("spearfish.csv")
+```
+
+```{r}
+sites <- rbind(dn, ds, ld)
+sites
+```
+
+```{r}
+str(sites)
+```
+
+
+```{r}
+s1 <- sites % select(
+  dep_id,
+  latitude,
+  longitude,
+  commod1,
+  commod2,
+  commod3,
+  ore,
+)
+```
+
