@@ -18,6 +18,7 @@ library(ggplot2)
 library(tidyverse)
 library(dplyr)
 library(corrplot)
+library(factoextra)
 ```
 
 ```{r}
@@ -41,6 +42,7 @@ sites
 ```{r}
 s1 <- sites %>% select(
   dep_id,
+  site_name,
   latitude,
   longitude,
   commod1,
@@ -63,9 +65,10 @@ s2$commod2 <- as.factor(s2$commod2)
 str(s2)
 ```
 ```{r}
-s2com <- unite(s2, commodities, 4:6, sep = ", ")
-#str(s2com)
+s2com <- unite(s2, commodities, 5:7, sep = ", ")
+str(s2com)
 ```
+
 ```{r}
 au <- str_detect(s2com$commodities, "Gold")
 #au
@@ -80,54 +83,59 @@ reds2com <- subset(s2com1, au == TRUE)
 ```
 
 ```{r}
-rownames(reds2com) <- 1:nrow(reds2com)
+reds2comF <- subset(s2com1, au == FALSE)
+```
+
+```{r}
+reds <- rbind(reds2com, reds2comF)
+reds
+```
+
+
+```{r}
+rownames(reds) <- 1:nrow(reds)
 #reds2com
 ```
 
 
 ```{r}
-colreds2com <- reds2com %>% separate(commodities, c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen"), "," ) 
+colreds <- reds %>% separate(commodities, c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen"), "," ) 
 ```
 ```{r}
-colSums(is.na(colreds2com))
+colSums(is.na(colreds))
 ```
 ```{r}
-reducedcol <- colreds2com %>% select(1:14)
+reducedcol <- colreds %>% select(1:15)
 ```
 
 ```{r}
 colSums(is.na(reducedcol))
 ```
-
 ```{r}
-#unique(reducedcol$one)
-```
-
-```{r}
-#unique(reducedcol$two)
+reducedcol
 ```
 
 
 ```{r}
-#unique(reducedcol$three)
-```
-
-```{r}
-noNA <- reducedcol %>% replace_na(list(four = "",  five = "", six  = "", seven  = "", eight  = "", nine = "", ten  = "", eleven  = ""))
+noNA <- reducedcol %>% replace_na(list(four = "", five = "", six  = "", seven  = "", eight  = "", nine = "", ten  = "", eleven  = ""))
 noNA[noNA == " NA"] <- ""
-#write.csv(noNA1, file = "noNA1.csv")
-#noNA
-
+write.csv(noNA, file = "noNA2full.csv")
+#View(noNA)
+noNA
 ```
 
 
 ```{r}
-#out <- unite(noNA, commodities, 4:14, sep = ", ")
-#write.csv(out, file = "out.csv")
-#out
+outFull <- unite(noNA, commodities, 5:15, sep = ", ")
+#write.csv(outFull, file = "outFull2.csv")
+#outFull
 ```
+
+
+
+
 ```{r}
-imported <- read.csv("in.csv")
+imported <- read.csv("inFull2.csv")
 imported
 ```
 
@@ -137,13 +145,20 @@ str(imported)
 
 
 ```{r}
-minerals <- c(colnames(imported[6:27]))
+minerals <- c(colnames(imported[7:38]))
 mined <- integer()
 #count <- 0
 for (names in minerals){
   mined <- c(mined, sum(imported[[names]]))
 }
 mined
+```
+```{r}
+minerals
+```
+```{r}
+bonded <- rbind(minerals, mined)
+bonded
 ```
 
 
@@ -161,6 +176,12 @@ htot
 ```
 
 ## Visualizations 
+
+```{r}
+barplot(totals$mined)
+```
+
+
 ```{r}
 str(imported)
 ```
@@ -168,7 +189,7 @@ str(imported)
 
 ```{r}
 corrdf <- imported %>% select(
-  7:27
+  7:38
 )
 corrdf
 ```
@@ -185,16 +206,116 @@ corrplot(corrdfvalues)
 
 
 
+```{r}
+#write.csv(corrdf, file = "corrdf.csv")
+factCorr <- read_csv("factoredCorrdf.csv")
+factCorr
+```
+
+
+
+```{r}
+set.seed(123)
+km.res <- kmeans(corrdf, 5, nstart = 25)
+km.res$cluster
+```
+
+```{r}
+#View(corrdf)
+result  <- kmeans(corrdf, 5)
+fviz_cluster(result, data = corrdf)
+```
+
+
+
+
+
+
+```{r}
+mineralsAuAgPb <- lm(Gold ~ Silver + Lead, data = factCorr) 
+mineralsAuAgPb
+```
+```{r}
+summary(mineralsAuAgPb)
+```
+```{r}
+anova(mineralsAuAgPb)
+```
+
+
+```{r}
+plot(mineralsAuAgPb)
+```
+```{r}
+coef(mineralsAuAgPb)
+```
+
+
+PCA#########################################################################
+```{r}
+pca <-prcomp(t(corrdf), scale. = TRUE)
+plot(pca$x[,1], pca$x[,3])
+rpca <- t(corrdf)
+```
+```{r}
+# from https://www.google.com/search?client=firefox-b-1-e&q=principle+component+analysis+in+r#kpvalbx=_rN4qX7nDEtGF9PwP3vO4oAM88
+pca.var <- pca$sdev^2
+pca.var.per <- round(pca.var/sum(pca.var)*100, 1)
+barplot(pca.var.per, main = "Min Plot", xlab = "Principle Component", ylab = "Percent Variation")
+
+```
+```{r}
+#rpca <t(pca$x)
+#View(pca)
+```
+
+
+```{r}
+
+pca.data <- data.frame(Sample=rownames(pca$x),
+                       X=pca$x[,1],
+                       Y=pca$x[,2])
+
+pca.data
+#View(pca.data)
+```
+
+
+```{r}
+ggplot(data=pca.data, aes(x=X, y=Y, label=Sample))+
+  geom_text()+
+  xlab(paste("PC1 - ", pca.var.per[1], "%", sep = ""))+
+  ylab(paste("PC2 - ", pca.var.per[2], "%", sep = ""))+
+  theme_bw()+
+  ggtitle("My Mineral Graph")
+```
+```{r}
+#pca$rotation[,1]
+```
+
+
+```{r}
+loading_scores <- pca$rotation[,1]
+gene_scores <- abs(loading_scores)
+gene_scores_ranked <- sort(gene_scores, decreasing = TRUE)
+gene_scores_ranked
+#top_10_genes <- names(gene_scores_ranked[1:10])
+#top_10_genes
+```
+
+```{r}
+pca$rotation[top_10_genes,1]
+```
+
+
 
 
 #####################################################################################
 
-```{r}
-mydata = read.csv("https://wiki.q-researchsoftware.com/images/b/b9/Ownership.csv", header = TRUE, fileEncoding="latin1")
-mydata
-```
 
 
+
+Goodness of fit?
 
 
 
