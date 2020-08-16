@@ -17,6 +17,9 @@ My specific research question is “Can the presence of gold be predicted from t
 
 This is a classification task. I will be predicting if the location has gold or not based on the minerals in that area. These data sets give latitude, longitude, and mineral data for given locations. I will create a train/test split to test for accuracy. The data sets have missing values, characters, and multiple pieces of information in single fields. The data will have to be cleaned and prepped in order to be useful. Multiple data sets will have to be combined into one data frame. Multiple rows will have to be dropped and only some fields selected. I will be using Rstudio to work with the data sets and storing the rmarkdown on GitHub. 
 
+##Methods  
+
+Libraries used
 ```{r}
 library(ggplot2)
 library(tidyverse)
@@ -25,6 +28,7 @@ library(corrplot)
 library(factoextra)
 ```
 
+Data read in from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota.
 ```{r}
 dn <- read.csv("deadwoodnorth.csv")
 ds <- read.csv("deadwoodsouth.csv")
@@ -33,7 +37,7 @@ tn <- read_csv("tinton.csv")
 sp <- read_csv("spearfish.csv")
 ```
 
-
+Here I bind all the data frames into one data frame.
 
 ```{r}
 sites <- rbind(dn, ds, ld, tn, sp)
@@ -41,7 +45,7 @@ sites
 ```
 
 
-
+I select only the fields that I will need from the sites data frame.
 
 ```{r}
 s1 <- sites %>% select(
@@ -55,71 +59,76 @@ s1 <- sites %>% select(
 )
 ```
 
-
+I copy the data frame to s2.
 ```{r}
 s2 <- data.frame(s1)
 ```
 
-
+I have to change one of the columns to factor to make it match the other two commod columns.
 ```{r}
 s2$commod2 <- as.factor(s2$commod2)
 ```
 
+Here is the structure of the new data frame.
 ```{r}
 str(s2)
 ```
+I unite commod1, 2, and 3 into one column called commodities.
 ```{r}
 s2com <- unite(s2, commodities, 5:7, sep = ", ")
 str(s2com)
 ```
-
+I create a vector with TRUE or FALSE for the presence of gold in each row of the data frame.
 ```{r}
 au <- str_detect(s2com$commodities, "Gold")
-#au
 ```
 
+I add that column to the data frame.
 ```{r}
 s2com1 <- cbind(s2com, au)
-#s2com1
 ```
 
+I reassemble the data frame with all gold mining in the first 299 rows of the data frame.
 ```{r}
 reds2com <- subset(s2com1, au == TRUE)
 reds2comF <- subset(s2com1, au == FALSE)
 reds <- rbind(reds2com, reds2comF)
 reds
-#reds2
 ```
 
 
 
 
-
+I give the rows numbers for easy reference.
 
 ```{r}
 rownames(reds) <- 1:nrow(reds)
 reds
 ```
-
+I separate out each mineral into its own column.
 
 ```{r}
 colreds <- reds %>% separate(commodities, c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen"), "," ) 
 ```
+I need to see which of the columns that I created are empty. 
 ```{r}
 colSums(is.na(colreds))
 ```
+Any columns that have 403 NAs can be cut.
+
 ```{r}
 reducedcol <- colreds %>% select(1:15)
 ```
 
+
 ```{r}
-colSums(is.na(reducedcol))
+#colSums(is.na(reducedcol))
 ```
 ```{r}
-reducedcol
+#reducedcol
 ```
 
-
+I replace NA with no spaces and write the file out to be worked on manually.
 ```{r}
 noNA <- reducedcol %>% replace_na(list(four = "", five = "", six  = "", seven  = "", eight  = "", nine = "", ten  = "", eleven  = ""))
 noNA[noNA == " NA"] <- ""
