@@ -11,7 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ##Introduction  
 
-I will predict gold presence from other minerals
+	I used to live in the Black Hills and would go gold panning for relaxation. I never found any gold, unfortunately. It occurs to me that if I use data science techniques, I might be able to predict where to find gold. I plan to use data sets from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota to predict whether gold can be found in the area of other minerals. If gold shows up with certain other minerals, I can narrow down the areas that I pan for gold. I will use support vector machine classification to predict gold or no gold.
+
+My specific research question is “Can the presence of gold be predicted from the presence of other minerals?” The USGS is a great resource for understanding where minerals were found and what minerals were present.
+
+This is a classification task. I will be predicting if the location has gold or not based on the minerals in that area. These data sets give latitude, longitude, and mineral data for given locations. I will create a train/test split to test for accuracy. The data sets have missing values, characters, and multiple pieces of information in single fields. The data will have to be cleaned and prepped in order to be useful. Multiple data sets will have to be combined into one data frame. Multiple rows will have to be dropped and only some fields selected. I will be using Rstudio to work with the data sets and storing the rmarkdown on GitHub. 
 
 ```{r}
 library(ggplot2)
@@ -76,25 +80,25 @@ au <- str_detect(s2com$commodities, "Gold")
 
 ```{r}
 s2com1 <- cbind(s2com, au)
+#s2com1
 ```
 
 ```{r}
 reds2com <- subset(s2com1, au == TRUE)
-```
-
-```{r}
 reds2comF <- subset(s2com1, au == FALSE)
-```
-
-```{r}
 reds <- rbind(reds2com, reds2comF)
 reds
+#reds2
 ```
+
+
+
+
 
 
 ```{r}
 rownames(reds) <- 1:nrow(reds)
-#reds2com
+reds
 ```
 
 
@@ -123,7 +127,7 @@ write.csv(noNA, file = "noNA2full.csv")
 #View(noNA)
 noNA
 ```
-
+Here I write the file out so that I can create a tabular data set for the minerals
 
 ```{r}
 outFull <- unite(noNA, commodities, 5:15, sep = ", ")
@@ -132,17 +136,17 @@ outFull <- unite(noNA, commodities, 5:15, sep = ", ")
 ```
 
 
-
+Here I read in the new data set with the minerals separated out into individual columns.
 
 ```{r}
 imported <- read.csv("inFull2.csv")
 imported
 ```
-
+I need to see the structure of the new data set
 ```{r}
 str(imported)
 ```
-
+Here I want to see how the totals of each mineral
 
 ```{r}
 minerals <- c(colnames(imported[7:38]))
@@ -151,14 +155,14 @@ mined <- integer()
 for (names in minerals){
   mined <- c(mined, sum(imported[[names]]))
 }
-mined
+#mined
 ```
 ```{r}
-minerals
+#minerals
 ```
 ```{r}
-bonded <- rbind(minerals, mined)
-bonded
+#bonded <- rbind(minerals, mined)
+#bonded
 ```
 
 
@@ -168,22 +172,23 @@ totals
 ```
 
 
-
 ```{r}
 htot <- as.data.frame(t(totals$mined))
 colnames(htot) <- minerals
 htot
 ```
 
+
+
 ## Visualizations 
 
 ```{r}
-barplot(totals$mined)
+barplot(totals$mined, names.arg = totals[,1], cex.names = 0.5, las = 2)
 ```
 
 
 ```{r}
-str(imported)
+#str(imported)
 ```
 
 
@@ -194,13 +199,14 @@ corrdf <- imported %>% select(
 corrdf
 ```
 
+
 ```{r}
 corrdfvalues <- cor(corrdf)
 ```
 
 
 ```{r}
-corrplot(corrdfvalues)
+corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 ```
 
 
@@ -209,7 +215,7 @@ corrplot(corrdfvalues)
 ```{r}
 #write.csv(corrdf, file = "corrdf.csv")
 factCorr <- read_csv("factoredCorrdf.csv")
-factCorr
+str(factCorr)
 ```
 
 
