@@ -26,6 +26,8 @@ library(tidyverse)
 library(dplyr)
 library(corrplot)
 library(factoextra)
+library(e1071)
+library(caret)
 ```
 
 Data read in from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota.
@@ -200,7 +202,7 @@ barplot(totals$mined, names.arg = totals[,1], cex.names = 0.5, las = 2)
 #str(imported)
 ```
 
-
+I create a data frame with just the minerals for correlation 
 ```{r}
 corrdf <- imported %>% select(
   7:38
@@ -208,36 +210,37 @@ corrdf <- imported %>% select(
 corrdf
 ```
 
-
+I calculate the correlations and create a correlation map
 ```{r}
 corrdfvalues <- cor(corrdf)
-```
-
-
-```{r}
 corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 ```
 
 
-
-
+I write out corrdf and import factoredCorrdf.csv for several different mineral combination factors
 ```{r}
 #write.csv(corrdf, file = "corrdf.csv")
 factCorr <- read_csv("factoredCorrdf.csv")
 str(factCorr)
 ```
+Using 
+```{r}
+test1 <- factCorr
+rownames(test1) <- test1$MineralType
+test1
 
+```
 
 
 ```{r}
 set.seed(123)
-km.res <- kmeans(corrdf, 5, nstart = 25)
+km.res <- kmeans(corrdf, 10, nstart = 403)
 km.res$cluster
 ```
 
 ```{r}
 #View(corrdf)
-result  <- kmeans(corrdf, 5)
+result  <- kmeans(corrdf, 2)
 fviz_cluster(result, data = corrdf)
 ```
 
@@ -248,11 +251,19 @@ fviz_cluster(result, data = corrdf)
 
 ```{r}
 mineralsAuAgPb <- lm(Gold ~ Silver + Lead, data = factCorr) 
-mineralsAuAgPb
-```
-```{r}
 summary(mineralsAuAgPb)
 ```
+```{r}
+mineralAuAg <- lm(Gold ~ Silver, data = factCorr)
+plot(mineralAuAg, col = mineralAuAg$Silver)
+abline(mineralAuAg, col = "blue")
+```
+```{r}
+mineralAuPb <- lm(Gold ~ Lead, data = factCorr)
+plot(mineralAuPb)
+abline(mineralAuPb, col = "blue")
+```
+
 ```{r}
 anova(mineralsAuAgPb)
 ```
@@ -261,6 +272,7 @@ anova(mineralsAuAgPb)
 ```{r}
 plot(mineralsAuAgPb)
 ```
+
 ```{r}
 coef(mineralsAuAgPb)
 ```
@@ -333,6 +345,57 @@ pca$rotation[top_10_genes,1]
 Goodness of fit?
 
 
+#############################################################################################
+```{r}
+redFC <- factCorr[2:34]
+redFC
+```
+
+```{r}
+redFC
+```
+
+
+```{r}
+set.seed(123)
+#redFC2 <- redFC[1:32]
+#redFC2
+redFC$MineralType <- as.factor(redFC$MineralType)
+redFC
+```
+```{r}
+divider <- createDataPartition(redFC$MineralType, times = 1, p = 0.7, list = FALSE)
+```
+```{r}
+train<-redFC[divider,]
+test<-redFC[-divider,]
+str(train)
+```
+
+
+
+```{r}
+#dim(factCorr)
+```
+
+
+```{r}
+svmModel <- svm(train$MineralType ~., data = train)
+svmModel
+```
+```{r}
+table(train$MineralType)
+```
+```{r}
+outcome <- predict(svmModel, train)
+table(Predicted = outcome, Tagged = train$MineralType)
+```
+
+
+```{r}
+testOutcome <- predict(svmModel, test)
+table(Predicted = testOutcome, Tagged = test$MineralType)
+```
 
 
 
