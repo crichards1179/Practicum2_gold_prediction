@@ -157,32 +157,23 @@ I need to see the structure of the new data set
 ```{r}
 str(imported)
 ```
-Here I want to see how the totals of each mineral
+Here I want to see how the totals of each mineral so I build a vector of sums of each mineral mined
 
 ```{r}
 minerals <- c(colnames(imported[7:38]))
 mined <- integer()
-#count <- 0
 for (names in minerals){
   mined <- c(mined, sum(imported[[names]]))
 }
-#mined
-```
-```{r}
-#minerals
-```
-```{r}
-#bonded <- rbind(minerals, mined)
-#bonded
 ```
 
-
+It looks like Gold, Silver, and Lead had the most observations
 ```{r}
 totals <- data.frame(minerals, mined)
 totals
 ```
 
-
+I transpose the data frame
 ```{r}
 htot <- as.data.frame(t(totals$mined))
 colnames(htot) <- minerals
@@ -191,27 +182,24 @@ htot
 
 
 
-## Visualizations 
+## Visualizations  
+Here is the count from above visualized
 
 ```{r}
 barplot(totals$mined, names.arg = totals[,1], cex.names = 0.5, las = 2)
 ```
-
-
 ```{r}
-#str(imported)
+totalObsMined <- sum(totals$mined)
+other <- totalObsMined - htot$Gold - htot$Silver - htot$Lead
+portions <- c(other, htot$Gold, htot$Silver, htot$Lead)
+mineObs <- c("other", "Gold", "Silver", "Lead")
+pie(portions, labels = mineObs, main = "Occurences of minerals in all the mining operations")
 ```
-
-I create a data frame with just the minerals for correlation 
+I create a data frame with just the minerals for correlation, visualized in a correlation map
 ```{r}
 corrdf <- imported %>% select(
   7:38
 )
-corrdf
-```
-
-I calculate the correlations and create a correlation map
-```{r}
 corrdfvalues <- cor(corrdf)
 corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 ```
@@ -221,7 +209,7 @@ I write out corrdf and import factoredCorrdf.csv for several different mineral c
 ```{r}
 #write.csv(corrdf, file = "corrdf.csv")
 factCorr <- read_csv("factoredCorrdf.csv")
-str(factCorr)
+#str(factCorr)
 ```
 Using 
 ```{r}
@@ -240,7 +228,7 @@ km.res$cluster
 
 ```{r}
 #View(corrdf)
-result  <- kmeans(corrdf, 2)
+result  <- kmeans(corrdf, 7)
 fviz_cluster(result, data = corrdf)
 ```
 
@@ -270,6 +258,7 @@ anova(mineralsAuAgPb)
 
 
 ```{r}
+par(mfrow=c(2,2))
 plot(mineralsAuAgPb)
 ```
 
