@@ -1,25 +1,29 @@
 ---
-title: "predicting_gold_presence"
+title: "Regis University, Master of Science in Data Science, Practicum II - Predicting Gold Presence"
 author: "Matt Twigg"
-date: "7/12/2020"
+date: "8/22/2020"
 output: html_document
 ---
 
-```{r setup, message=FALSE ,warning=FALSE}
+```{r setup, message=FALSE , warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-##Introduction  
+## Introduction  
 
-	I used to live in the Black Hills and would go gold panning for relaxation. I never found any gold, unfortunately. It occurs to me that if I use data science techniques, I might be able to predict where to find gold. I plan to use data sets from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota to predict whether gold can be found in the area of other minerals. If gold shows up with certain other minerals, I can narrow down the areas that I pan for gold. I will use support vector machine classification to predict gold or no gold.
+I used to live in the Black Hills and would go gold panning. Unfortunately, I never found any gold even though I had heard that only half of the gold in the Black Hills had been extracted. Also, gold panning can be tiring as one sits or stands in the same position for a while.  It occurs to me that if I use data science techniques, I might be able to predict where to find gold. I plan to use data sets from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota to predict whether gold can be found in the area of other minerals. If gold shows up with certain other minerals, I can narrow down the areas that I pan for gold. I will create a train/test split to test for accuracy and use support vector machine for classification and prediction of gold.
+
+
 
 My specific research question is “Can the presence of gold be predicted from the presence of other minerals?” The USGS is a great resource for understanding where minerals were found and what minerals were present.
 
-This is a classification task. I will be predicting if the location has gold or not based on the minerals in that area. These data sets give latitude, longitude, and mineral data for given locations. I will create a train/test split to test for accuracy. The data sets have missing values, characters, and multiple pieces of information in single fields. The data will have to be cleaned and prepped in order to be useful. Multiple data sets will have to be combined into one data frame. Multiple rows will have to be dropped and only some fields selected. I will be using Rstudio to work with the data sets and storing the rmarkdown on GitHub. 
+## Methods 
 
-##Methods  
+These data sets give latitude, longitude, and mineral data for given locations. The data sets have missing values, characters, and multiple pieces of information in single fields. The data will have to be cleaned and prepped in order to be useful. Multiple data sets will have to be combined into one data frame. Multiple rows will have to be dropped and only some fields selected. I will be using Rstudio to work with the data sets and storing the rmarkdown on GitHub. 
 
-Libraries used
+ 
+
+### Libraries used
 ```{r message=FALSE ,warning=FALSE}
 library(ggplot2)
 library(tidyverse)
