@@ -11,16 +11,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction  
 
-I used to live in the Black Hills and would go gold panning. Unfortunately, I never found any gold even though I had heard that only half of the gold in the Black Hills had been extracted. Also, gold panning can be tiring as one sits or stands in the same position for a while.  It occurs to me that if I use data science techniques, I might be able to predict where to find gold. I plan to use data sets from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota to predict whether gold can be found in the area of other minerals. If gold shows up with certain other minerals, I can narrow down the areas that I pan for gold. I will create a train/test split to test for accuracy and use support vector machine for classification and prediction of gold.
+I used to live in the Black Hills and would go gold panning. Unfortunately, I never found any gold even though I had heard that only half of the gold in the Black Hills had been extracted. Also, gold panning can be tiring as one sits or stands in the same position for a while.  It occurs to me that if I use data science techniques, I might be able to predict where to find gold. If gold shows up with certain other minerals, I can narrow down the areas that I pan for gold. I will create a train/test split to test for accuracy and use support vector machine for classification and prediction of gold.
 
-
-
-My specific research question is “Can the presence of gold be predicted from the presence of other minerals?” The USGS is a great resource for understanding where minerals were found and what minerals were present.
+My specific research question is “Can the presence of gold be predicted from the presence of other minerals?” 
 
 ## Methods 
 
-These data sets give latitude, longitude, and mineral data for given locations. The data sets have missing values, characters, and multiple pieces of information in single fields. The data will have to be cleaned and prepped in order to be useful. Multiple data sets will have to be combined into one data frame. Multiple rows will have to be dropped and only some fields selected. I will be using Rstudio to work with the data sets and storing the rmarkdown on GitHub. 
+The USGS is a great resource for understanding where minerals were found and what minerals were present. I plan to use data sets from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota to predict whether gold can be found in the area of other minerals. These data sets give latitude, longitude, and mineral data for given locations. The data sets have missing values, characters, and multiple pieces of information in single fields. The data will have to be cleaned and prepped in order to be useful. Multiple data sets will have to be combined into one data frame. Multiple rows will have to be dropped and only some fields selected. I will be using Rstudio to work with the data sets and storing the rmarkdown on GitHub. 
 
+I am starting off with the following null and alternative hypothesis for the independent variables gold, silver, and lead (I looked at the two most prevalent minerals after gold. In order for the presence of silver or lead to predict the presence of gold, difference between the groups can not be due to chance.
+
+Null hypthesis: any differences in the groups are due to chance - they are not significant. 
+Alternative hypothesis: differences are not due to chance - they are significant
  
 
 ### Libraries used
@@ -36,6 +38,7 @@ library(class)
 library(gmodels)
 ```
 
+## Exploration  
 Data read in from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota.
 ```{r message=FALSE ,warning=FALSE}
 dn <- read.csv("deadwoodnorth.csv")
@@ -44,16 +47,11 @@ ld <- read.csv("lead.csv")
 tn <- read_csv("tinton.csv")
 sp <- read_csv("spearfish.csv")
 ```
-
-Here I bind all the data frames into one data frame.
-
+Here I bind all the data frames into one data frame.  
 ```{r}
 sites <- rbind(dn, ds, ld, tn, sp)
 ```
-
-
 I select only the fields that I will need from the sites data frame.
-
 ```{r}
 s1 <- sites %>% select(
   dep_id,
@@ -65,17 +63,14 @@ s1 <- sites %>% select(
   commod3,
 )
 ```
-
 I copy the data frame to s2.
 ```{r}
 s2 <- data.frame(s1)
 ```
-
 I have to change one of the columns to factor to make it match the other two commod columns.
 ```{r}
 s2$commod2 <- as.factor(s2$commod2)
 ```
-
 Here is the structure of the new data frame.
 ```{r}
 str(s2)
@@ -89,69 +84,48 @@ I create a vector with TRUE or FALSE for the presence of gold in each row of the
 ```{r}
 au <- str_detect(s2com$commodities, "Gold")
 ```
-
 I add that column to the data frame.
 ```{r}
 s2com1 <- cbind(s2com, au)
 ```
-
 I reassemble the data frame with all gold mining in the first 299 rows of the data frame.
 ```{r}
 reds2com <- subset(s2com1, au == TRUE)
 reds2comF <- subset(s2com1, au == FALSE)
 reds <- rbind(reds2com, reds2comF)
-#reds
 ```
-
-
-
-
-I give the rows numbers for easy reference.
-
+I give the rows numbers for easy reference.  
 ```{r}
 rownames(reds) <- 1:nrow(reds)
-#reds
 ```
 I separate out each mineral into its own column.
-
 ```{r}
 colreds <- reds %>% separate(commodities, c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen"), "," ) 
 ```
-I need to see which of the columns that I created are empty. 
+I need to know which columns are empty so I count the NA values. 
 ```{r}
 colSums(is.na(colreds))
 ```
-Any columns that have 403 NAs can be cut.
-
+and any columns that have 403 NAs get cut.  
 ```{r}
 reducedcol <- colreds %>% select(1:15)
 ```
-
-
-
-I replace NA with no spaces and write the file out to be worked on manually, the final step in turning categorical data into quantitative discrete data.
+I replace NA with no spaces, create a new data frame, make sure there are no more NA values, and unite all the expanded columns into one commodities column for easy reading of minerals. I then write the file out to be worked on manually, the final step in turning categorical data into quantitative discrete data.
 ```{r}
 noNA <- reducedcol %>% replace_na(list(four = "", five = "", six  = "", seven  = "", eight  = "", nine = "", ten  = "", eleven  = ""))
 noNA[noNA == " NA"] <- ""
-#noNA
 outFull <- unite(noNA, commodities, 5:15, sep = ", ")
 #write.csv(outFull, file = "outFull2.csv")
-#outFull
 ```
-
-
-Here I read in the new data set with the minerals separated out into individual columns.
-
+Here I read in the new data set with each mineral having its own column.
 ```{r}
 imported <- read.csv("inFull2.csv")
-#imported 
 ```
 I need to see the structure of the new data set. Here I see that the mineral variables are numerical and discrete.
 ```{r}
 str(imported)
-#View(imported)
 ```
-I also want to write out the lat/long data. I will use this later in Google Maps.
+I also want to write out the lat/long data for gold mines. I will use this later in Google Maps.
 ```{r}
 allLatLong <- imported[3:5]
 latLong <- allLatLong[1:299,]
@@ -214,49 +188,17 @@ corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 
 
 
-##Analysis##  
+## Analysis    
 
 ```{r}
 #set.seed(123)
 #tabImp <- imported[7:38]
 ```
 
-###Logistic regression###
-
-```{r}
-tabImp <- imported[7:38]
-mineralsAuAgPb <- glm(Gold ~ Silver + Lead, data = tabImp) 
-summary(mineralsAuAgPb)
-```
-```{r}
-mineralAuAg <- glm(Gold ~ Silver, data = tabImp)
-par(mfrow=c(2,2))
-plot(mineralsAuAgPb, col = mineralsAuAgPb$Silver)
-abline(mineralAuAg, col = "blue")
-```
-```{r}
-mineralAuPb <- glm(Gold ~ Lead, data = imported)
-par(mfrow=c(2,2))
-plot(mineralAuPb, col=mineralAuAg$L)
-abline(mineralAuPb, col = "blue")
-```
-
-```{r}
-anova(mineralsAuAgPb)
-```
 
 
-```{r}
-par(mfrow=c(2,2))
-plot(mineralsAuAgPb)
-```
 
-```{r}
-coef(mineralsAuAgPb)
-```
-
-
-###PCA###  
+### PCA    
 
 ```{r}
 pca <-prcomp(t(corrdf), scale. = TRUE)
@@ -318,7 +260,7 @@ pca$rotation[top_10_genes,1]
 
 
 
-#############################################################################################
+### Support Vector Machine 
 ```{r}
 #redFC <- imported[7:39]
 #redFC
@@ -366,6 +308,49 @@ testOutcome <- predict(svmModel, test)
 table(Predicted = testOutcome, Tagged = test$MineralType)
 ```
 
+
+
+### Logistic regression  
+
+```{r}
+tabImp <- imported[7:38]
+mineralsAuAgPb <- glm(Gold ~ Silver + Lead, data = tabImp) 
+summary(mineralsAuAgPb)
+```
+```{r}
+mineralAuAg <- glm(Gold ~ Silver, data = tabImp)
+par(mfrow=c(2,2))
+plot(mineralsAuAgPb, col = mineralsAuAgPb$Silver)
+abline(mineralAuAg, col = "blue")
+```
+```{r}
+mineralAuPb <- glm(Gold ~ Lead, data = imported)
+par(mfrow=c(2,2))
+plot(mineralAuPb, col=mineralAuAg$L)
+abline(mineralAuPb, col = "blue")
+```
+
+```{r}
+anova(mineralsAuAgPb)
+```
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(mineralsAuAgPb)
+```
+
+```{r}
+coef(mineralsAuAgPb)
+```
+
+
+
+
+
+
+## Conclusion  
+When I started this project I thought that I was making a pretty good choice for data relating to classification and prediction. It turned out to be more difficult to predict the presence of gold with the provided data set than I had supposed. I thought that the problem was determining the correct classification and prediction algorithms. It turned out that the real problem that needed defining was how to transform the data set. As I started exploring the data I realized that the data was categorical and was really best suited for descriptive statics (number of mines, type of ore extracted, mine location, etc.). In order to use the data, I would have to transform it into quantitative discrete data. I did this through manual one-hot encoding, creating individual variables for each mineral mined and recording a 1 for mineral present, a zero for not present. The data collection was relatively easy as I was able to download it from one site and the individual data sets had pretty much the same structure. The data difficulty level was also not too bad with simple row binding of the sets and some mess to the data. One of the columns was inconsistent with similar columns requiring it to be converted to factor. Data cleaning was moderate with removal of NAs from a lot of the columns. Data inspection (initial analysis/EDA) effort was also moderate revealing that transformations were necessary before real descriptive statistics or inferential statistics could be applied. Feature selection was a continuous process throughout the project to try to reduce the number of original variables. At times, I had to go back and revise the variable selection. Once I selected the variables, I had to engineer features (one hot encoding) from categorical to quantitative discrete. The project was coded in R but the feature engineering was done manually in LibreOffice Calc. I used multiple R libraries for the project. The machine learning methods I used for this project were SVM and logistic regression. I guess one could consider my use of a correlation map as giving some business insight into prospecting for gold. SVM results in low p values. I reject the null hypothesis so the group differences are significant. Because the model statistic is high I can rely on the model. This suggests that the presence of silver is a predictor of gold while the presence of lead predicts the absence of gold. I do not feel real confident about the answers that I got. I think that the SVM model is flexible enough that the results using quantitative discrete data are acceptable for silver and lead.The basic reasoning for my prediction goes like this, the groups are different, I prove it by running svm and it can create a hyperplane classifying the groups. Since the group differences are not due to chance, I can run logistic modeling to predict the occurrence of gold.
 
 
 
