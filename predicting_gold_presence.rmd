@@ -5,7 +5,7 @@ date: "7/12/2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, message=FALSE ,warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -20,7 +20,7 @@ This is a classification task. I will be predicting if the location has gold or 
 ##Methods  
 
 Libraries used
-```{r}
+```{r message=FALSE ,warning=FALSE}
 library(ggplot2)
 library(tidyverse)
 library(dplyr)
@@ -33,7 +33,7 @@ library(gmodels)
 ```
 
 Data read in from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota.
-```{r}
+```{r message=FALSE ,warning=FALSE}
 dn <- read.csv("deadwoodnorth.csv")
 ds <- read.csv("deadwoodsouth.csv")
 ld <- read.csv("lead.csv")
@@ -125,22 +125,14 @@ reducedcol <- colreds %>% select(1:15)
 
 
 
-I replace NA with no spaces and write the file out to be worked on manually.
+I replace NA with no spaces and write the file out to be worked on manually, the final step in turning categorical data into quantitative discrete data.
 ```{r}
 noNA <- reducedcol %>% replace_na(list(four = "", five = "", six  = "", seven  = "", eight  = "", nine = "", ten  = "", eleven  = ""))
 noNA[noNA == " NA"] <- ""
 #noNA
-```
-Here I write the file out so that I can create a tabular data set for the minerals
-
-```{r}
 outFull <- unite(noNA, commodities, 5:15, sep = ", ")
 #write.csv(outFull, file = "outFull2.csv")
 #outFull
-```
-
-```{r}
-
 ```
 
 
@@ -150,12 +142,12 @@ Here I read in the new data set with the minerals separated out into individual 
 imported <- read.csv("inFull2.csv")
 #imported 
 ```
-I need to see the structure of the new data set
+I need to see the structure of the new data set. Here I see that the mineral variables are numerical and discrete.
 ```{r}
 str(imported)
 #View(imported)
 ```
-I also want to write out the lat/long data
+I also want to write out the lat/long data. I will use this later in Google Maps.
 ```{r}
 allLatLong <- imported[3:5]
 latLong <- allLatLong[1:299,]
@@ -182,29 +174,32 @@ colMinerals <- names(imported)
 added <- colSums(imported[7:38])
 totals1 <- data.frame(added)
 totals2 <- t(totals1)
-barplot(totals2, cex.names = 0.5, las = 2)
+barplot(totals2, cex.names = 0.5, las = 2, main = "Frequency of Minerals")
 ```
 ```{r}
 #totals2
 ```
 
 
-Here is how the top  three minerals compare to all the others added up.
+Here is how the top  three minerals compare to all the others added up. Total occurence of minerals.
 
 ```{r}
 totalObsMined <- sum(totals1)
 totalObsMined
 ```
+Mineral occurences when I remove gold, silver, and lead.
 ```{r}
 other <- totalObsMined - totals2[1] - totals2[2] - totals2[3]
 other
 ```
+
+It's easier to visualize as a pie chart.
 ```{r}
 portions <- c(other, totals2[1], totals2[2], totals2[3])
 mineObs <- c("other", "Gold", "Silver", "Lead")
 pie(portions, labels = mineObs, main = "Occurences of minerals in all the mining operations")
 ```
-I create a data frame with just the minerals for correlation, visualized in a correlation map
+I want to see if anything is correlated to gold. I create a data frame with just the minerals for correlation, visualized in a correlation map
 ```{r}
 corrdf <- imported %>% select(
   7:38
@@ -215,27 +210,17 @@ corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 
 
 
-
-
-```{r}
-set.seed(123)
-tabImp <- imported[7:38]
-km.res <- kmeans(tabImp, 10, nstart = 10)
-km.res$cluster
-```
-
-```{r}
-#View(corrdf)
-result  <- kmeans(tabImp, 20)
-fviz_cluster(result, data = tabImp)
-```
 ##Analysis##  
 
-
+```{r}
+#set.seed(123)
+#tabImp <- imported[7:38]
+```
 
 ###Logistic regression###
 
 ```{r}
+tabImp <- imported[7:38]
 mineralsAuAgPb <- glm(Gold ~ Silver + Lead, data = tabImp) 
 summary(mineralsAuAgPb)
 ```
@@ -265,38 +250,7 @@ plot(mineralsAuAgPb)
 ```{r}
 coef(mineralsAuAgPb)
 ```
-###K nearest neighbor###  
 
-```{r}
-#knnDF <- imported[,c(8:38, 40)]
-```
-
-Guidance from https://rpubs.com/Drmadhu/IRISclassification
-```{r}
-divideImp <- createDataPartition(imported$targetMineral, times = 1, p = 0.7, list = FALSE)
-```
-
-```{r}
-knnDF <- imported[,c(8:38, 40)]
-knntrain<-knnDF[divideImp,]
-knntest<-knnDF[-divideImp,]
-knntrain2 <-knntrain[-32]
-knntest2 <- knntest[-32]
-```
-
-```{r}
-knnTrainLabels <- knntrain$targetMineral
-knnTestLabels <- knntest$targetMineral
-```
-I train the model
-```{r}
-knnTestPred <- knn(train = knntrain2, test = knntest2, cl = knnTrainLabels, k  = 6, prob = TRUE)
-```
-
-```{r}
-CrossTable(x = knnTestLabels, y = knnTestPred, prop.chisq = FALSE)
-```
-18/116 means a 16% error rate. 
 
 ###PCA###  
 
@@ -358,17 +312,11 @@ pca$rotation[top_10_genes,1]
 
 
 
-#####################################################################################
-
-
-
-
-Goodness of fit?
 
 
 #############################################################################################
 ```{r}
-redFC <- imported[7:39]
+#redFC <- imported[7:39]
 #redFC
 ```
 
@@ -381,9 +329,11 @@ redFC <- imported[7:39]
 set.seed(123)
 #redFC2 <- redFC[1:32]
 #redFC2
+redFC <- imported[7:39]
 redFC$MineralType <- as.factor(redFC$MineralType)
 #redFC
 ```
+
 ```{r}
 divider <- createDataPartition(redFC$MineralType, times = 1, p = 0.7, list = FALSE)
 train<-redFC[divider,]
