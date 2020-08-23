@@ -25,7 +25,7 @@ Null hypthesis: any differences in the groups are due to chance - they are not s
 Alternative hypothesis: differences are not due to chance - they are significant
  
 
-### Libraries used
+### Libraries used  
 ```{r message=FALSE ,warning=FALSE}
 library(ggplot2)
 library(tidyverse)
@@ -138,7 +138,18 @@ write.csv(latLong, file = "latLong.csv")
 #class(added)
 ```
 
+## Exploratory Data Analysis
 
+```{r}
+corrdf <- imported %>% select(
+  7:38
+)
+```
+
+```{r}
+allcor <- cor(corrdf, method = "spearman")
+allcor
+```
 
 
 
@@ -159,7 +170,7 @@ barplot(totals2, cex.names = 0.5, las = 2, main = "Frequency of Minerals")
 ```
 
 
-Here is how the top  three minerals compare to all the others added up. Total occurence of minerals.
+Here is how the top  three minerals compare to all the others added up. Total ocurrance of minerals.
 
 ```{r}
 totalObsMined <- sum(totals1)
@@ -179,9 +190,9 @@ pie(portions, labels = mineObs, main = "Occurences of minerals in all the mining
 ```
 I want to see if anything is correlated to gold. I create a data frame with just the minerals for correlation, visualized in a correlation map
 ```{r}
-corrdf <- imported %>% select(
-  7:38
-)
+##corrdf <- imported %>% select(
+##  7:38
+##)
 corrdfvalues <- cor(corrdf)
 corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 ```
@@ -211,13 +222,22 @@ corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 set.seed(123)
 #redFC2 <- redFC[1:32]
 #redFC2
-redFC <- imported[7:39]
-redFC$MineralType <- as.factor(redFC$MineralType)
+tempMin <- imported[8:38]
+tempTarget <- imported[40]
+tempReducedWithFactorCombined <-as.data.frame(c(tempMin,tempTarget))
+redFC <- tempReducedWithFactorCombined
+#redFC <- as.data.frame(redFC)
+#redFC <- imported[7:39]
+redFC
+```
+
+```{r}
+#redFC$MineralType <- as.factor(redFC$MineralType)
 #redFC
 ```
 
 ```{r}
-divider <- createDataPartition(redFC$MineralType, times = 1, p = 0.7, list = FALSE)
+divider <- createDataPartition(redFC$targetMineral, times = 1, p = 0.7, list = FALSE)
 train<-redFC[divider,]
 test<-redFC[-divider,]
 str(train)
@@ -227,58 +247,41 @@ str(train)
 
 
 ```{r}
-svmModel <- svm(train$MineralType ~., data = train)
+svmModel <- svm(train$targetMineral ~., data = train)
 svmModel
 ```
 ```{r}
-table(train$MineralType)
+table(train$targetMineral)
 ```
 ```{r}
 outcome <- predict(svmModel, train)
-table(Predicted = outcome, Tagged = train$MineralType)
+table(Predicted = outcome, Tagged = train$targetMineral)
 ```
 
 
 ```{r}
 testOutcome <- predict(svmModel, test)
-table(Predicted = testOutcome, Tagged = test$MineralType)
+table(Predicted = testOutcome, Tagged = test$targetMineral)
 ```
 
 
 
 ### Logistic regression  
-
+I use logistic regression to predict gold from presence of silver and lead. I also use logistic regression to examine the p-value of silver and lead to gold.
 ```{r}
 tabImp <- imported[7:38]
 mineralsAuAgPb <- glm(Gold ~ Silver + Lead, data = tabImp) 
 summary(mineralsAuAgPb)
 ```
-```{r}
-mineralAuAg <- glm(Gold ~ Silver, data = tabImp)
-par(mfrow=c(2,2))
-plot(mineralsAuAgPb, col = mineralsAuAgPb$Silver)
-abline(mineralAuAg, col = "blue")
-```
-```{r}
-mineralAuPb <- glm(Gold ~ Lead, data = imported)
-par(mfrow=c(2,2))
-plot(mineralAuPb, col=mineralAuAg$L)
-abline(mineralAuPb, col = "blue")
-```
-
-```{r}
-anova(mineralsAuAgPb)
-```
 
 
-```{r}
-par(mfrow=c(2,2))
-plot(mineralsAuAgPb)
-```
 
-```{r}
-coef(mineralsAuAgPb)
-```
+
+
+
+
+
+
 
 
 
