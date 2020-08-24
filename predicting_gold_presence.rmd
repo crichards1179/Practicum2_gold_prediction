@@ -5,7 +5,7 @@ date: "8/22/2020"
 output: html_document
 ---
 
-```{r setup, message=FALSE , warning=FALSE}
+```{r setup, message=FALSE , warning=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -14,8 +14,6 @@ knitr::opts_chunk$set(echo = TRUE)
 I used to live in the Black Hills and would go gold panning. Unfortunately, I never found any gold even though I had heard that only half of the gold in the Black Hills had been extracted. Also, gold panning can be tiring as one sits or stands in the same position for a while.  It occurs to me that if I use data science techniques, I might be able to predict where to find gold. If gold shows up with certain other minerals, I can narrow down the areas that I pan for gold. I will create a train/test split to test for accuracy and use support vector machine for classification and prediction of gold.
 
 My specific research question is “Can the presence of gold be predicted from the presence of other minerals?” 
-
-## Methods 
 
 The USGS is a great resource for understanding where minerals were found and what minerals were present. I plan to use data sets from https://mrdata.usgs.gov/mrds/geo-inventory.php for Lawrence County, South Dakota to predict whether gold can be found in the area of other minerals. These data sets give latitude, longitude, and mineral data for given locations. The data sets have missing values, characters, and multiple pieces of information in single fields. The data will have to be cleaned and prepped in order to be useful. Multiple data sets will have to be combined into one data frame. Multiple rows will have to be dropped and only some fields selected. I will be using Rstudio to work with the data sets and storing the rmarkdown on GitHub. 
 
@@ -125,7 +123,7 @@ I need to see the structure of the new data set. Here I see that the mineral var
 ```{r}
 str(imported)
 ```
-I also want to write out the lat/long data for gold mines. I will use this later in Google Maps.
+I also want to write out the lat/long data for gold mines. I will use this later in Google Earth Pro.
 ```{r}
 allLatLong <- imported[3:5]
 latLong <- allLatLong[1:299,]
@@ -133,50 +131,44 @@ write.csv(latLong, file = "latLong.csv")
 ```
 
 
-```{r}
-#added <- colSums(imported[7:38])
-#class(added)
-```
 
 ## Exploratory Data Analysis
 
+I start off by creating a data frame with the mineral variables to run correlations on.
 ```{r}
 corrdf <- imported %>% select(
   7:38
 )
 ```
-
+I run the correlations using the spearman method since the data is non-parametric. I only want to see the first 3 correlation to gold (gold, silver, lead). 
 ```{r}
 allcor <- cor(corrdf, method = "spearman")
-allcor
+head(allcor[1:3])
 ```
 
-
-
-
-## Visualizations  
-
-I want to see  the sums of each mineral. Here is the count visualized. It looks like Gold, Silver, and Lead had the most observations
+I want to see  the sums of each mineral. It looks like Gold, Silver, and Lead had the most observations.
 ```{r}
 
 colMinerals <- names(imported)
 added <- colSums(imported[7:38])
 totals1 <- data.frame(added)
 totals2 <- t(totals1)
-barplot(totals2, cex.names = 0.5, las = 2, main = "Frequency of Minerals")
+totals2
 ```
-```{r}
-#totals2
-```
-
-
-Here is how the top  three minerals compare to all the others added up. Total ocurrance of minerals.
-
+Total occurrence of minerals.  
 ```{r}
 totalObsMined <- sum(totals1)
 totalObsMined
 ```
-Mineral occurences when I remove gold, silver, and lead.
+
+## Visualizations 
+Here is the count visualized.
+```{r}
+barplot(totals2, cex.names = 0.5, las = 2, main = "Frequency of Minerals")
+```
+
+
+Mineral occurrences when I remove gold, silver, and lead.  
 ```{r}
 other <- totalObsMined - totals2[1] - totals2[2] - totals2[3]
 other
@@ -188,7 +180,7 @@ portions <- c(other, totals2[1], totals2[2], totals2[3])
 mineObs <- c("other", "Gold", "Silver", "Lead")
 pie(portions, labels = mineObs, main = "Occurences of minerals in all the mining operations")
 ```
-I want to see if anything is correlated to gold. I create a data frame with just the minerals for correlation, visualized in a correlation map
+I want to see if anything is correlated to gold. I create a data frame with just the minerals for correlation, visualized in a correlation map. Up in the left corner are the correlations of gold, silver, and lead to each other.
 ```{r}
 ##corrdf <- imported %>% select(
 ##  7:38
@@ -197,99 +189,89 @@ corrdfvalues <- cor(corrdf)
 corrplot(corrdfvalues, tl.srt = 45, tl.cex = .5)
 ```
 
-
-
 ## Analysis    
 
-```{r}
-#set.seed(123)
-#tabImp <- imported[7:38]
-```
-
-
 ### Support Vector Machine 
-```{r}
-#redFC <- imported[7:39]
-#redFC
-```
-
-```{r}
-#redFC
-```
-
-
+I need to create a data set that has the quantitative value along with the binary factor of gold present or not. I leave gold out I am looking to see if all the dependent variables will lead to correct classification of the target mineral (gold) is present.  
 ```{r}
 set.seed(123)
-#redFC2 <- redFC[1:32]
-#redFC2
 tempMin <- imported[8:38]
 tempTarget <- imported[40]
 tempReducedWithFactorCombined <-as.data.frame(c(tempMin,tempTarget))
 redFC <- tempReducedWithFactorCombined
-#redFC <- as.data.frame(redFC)
-#redFC <- imported[7:39]
-redFC
+head(redFC)
 ```
 
+I create test and train data sets.  
 ```{r}
-#redFC$MineralType <- as.factor(redFC$MineralType)
-#redFC
-```
-
-```{r}
+set.seed(123)
 divider <- createDataPartition(redFC$targetMineral, times = 1, p = 0.7, list = FALSE)
 train<-redFC[divider,]
 test<-redFC[-divider,]
-str(train)
 ```
 
-
-
-
-```{r}
+I generate the svm model using the train data set. As the data is not linear svm knows to use a radial kernal. 
+```{r message=FALSE ,warning=FALSE}
 svmModel <- svm(train$targetMineral ~., data = train)
 svmModel
 ```
-```{r}
-table(train$targetMineral)
-```
-```{r}
-outcome <- predict(svmModel, train)
-table(Predicted = outcome, Tagged = train$targetMineral)
-```
 
-
+using the test data set the svm model generated a confusion matrix of (4+88)/(4+88+1+27) = 92/120 = 76.7% accuracy.  
 ```{r}
 testOutcome <- predict(svmModel, test)
 table(Predicted = testOutcome, Tagged = test$targetMineral)
 ```
 
+### Logistic Regression
+I got guidance from https://www.guru99.com/r-generalized-linear-model.html and modified some to the code for my needs.  
 
-
-### Logistic regression  
-I use logistic regression to predict gold from presence of silver and lead. I also use logistic regression to examine the p-value of silver and lead to gold.
+I use logistic regression to predict gold from presence of silver. I choose silver because it has the higher correlation and is a positive correlation to gold. I also use logistic regression to examine the p-value of silver. I choose the binomial family because the dependent variable is binary. 
 ```{r}
-tabImp <- imported[7:38]
-mineralsAuAgPb <- glm(Gold ~ Silver + Lead, data = tabImp) 
-summary(mineralsAuAgPb)
+mineralsAuAg <- glm(train$targetMineral ~ Silver, data = train, family = "binomial") 
+summary(mineralsAuAg)
+```
+I do the same for silver
+```{r}
+mineralsAuPb <- glm(train$targetMineral ~ Lead, data = train, family = "binomial") 
+summary(mineralsAuPb)
+```
+At this point I am really not sure about the results because the results are not standard. I simply could not find an answer to the question of how (or is it possible) to run logistic regression on my data set. Intuitively, it seems like it would work as the independent variables are numerical and the dependent variable is binary. P-value is very low so I can reject the null hypothesis, the difference between gold and lead is not due to chance.
+```{r}
+mineralsAuAg <- glm(train$targetMineral ~ Silver, data = train, family = "binomial") 
+summary(mineralsAuAg)
+```
+I do the same for lead. P-value is very low so I can reject the null hypothesis, the difference between gold and lead is not due to chance.
+```{r}
+mineralsAuPb <- glm(train$targetMineral ~ Lead, data = train, family = "binomial") 
+summary(mineralsAuPb)
+``` 
+
+I run the logistic regression model on the test data set and round the data giving only 0 and 2. I interpret 0 as no and 2 as yes for predicting gold.
+```{r}
+predictGold <- predict(mineralsAuAg, test)
+predictGold <- round(predictGold)
+predictGold
+```
+I run a confusion matrix for silver predicting gold. It is really out of standard results now. Again, I interpret 0 as no and 2 as yes.  
+It looks like the accuracy is (19 + 74)/(19+74+12+15) = 93/120 = .775 = 77.5%. 
+```{r}
+confusionM <- table(test$targetMineral, predictGold)
+confusionM
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## Conclusion  
-When I started this project I thought that I was making a pretty good choice for data relating to classification and prediction. It turned out to be more difficult to predict the presence of gold with the provided data set than I had supposed. I thought that the problem was determining the correct classification and prediction algorithms. It turned out that the real problem that needed defining was how to transform the data set. As I started exploring the data I realized that the data was categorical and was really best suited for descriptive statics (number of mines, type of ore extracted, mine location, etc.). In order to use the data, I would have to transform it into quantitative discrete data. I did this through manual one-hot encoding, creating individual variables for each mineral mined and recording a 1 for mineral present, a zero for not present. The data collection was relatively easy as I was able to download it from one site and the individual data sets had pretty much the same structure. The data difficulty level was also not too bad with simple row binding of the sets and some mess to the data. One of the columns was inconsistent with similar columns requiring it to be converted to factor. Data cleaning was moderate with removal of NAs from a lot of the columns. Data inspection (initial analysis/EDA) effort was also moderate revealing that transformations were necessary before real descriptive statistics or inferential statistics could be applied. Feature selection was a continuous process throughout the project to try to reduce the number of original variables. At times, I had to go back and revise the variable selection. Once I selected the variables, I had to engineer features (one hot encoding) from categorical to quantitative discrete. The project was coded in R but the feature engineering was done manually in LibreOffice Calc. I used multiple R libraries for the project. The machine learning methods I used for this project were SVM and logistic regression. I guess one could consider my use of a correlation map as giving some business insight into prospecting for gold. SVM results in low p values. I reject the null hypothesis so the group differences are significant. Because the model statistic is high I can rely on the model. This suggests that the presence of silver is a predictor of gold while the presence of lead predicts the absence of gold. I do not feel real confident about the answers that I got. I think that the SVM model is flexible enough that the results using quantitative discrete data are acceptable for silver and lead.The basic reasoning for my prediction goes like this, the groups are different, I prove it by running svm and it can create a hyperplane classifying the groups. Since the group differences are not due to chance, I can run logistic modeling to predict the occurrence of gold.
+When I started this project I thought that I was making a pretty good choice for data relating to classification and prediction. It turned out to be more difficult to predict the presence of gold with the provided data set than I had supposed.  
+
+I thought that the problem was determining the correct classification and prediction algorithms. It turned out that the real problem that needed defining was how to transform the data set. As I started exploring the data I realized that the data was categorical and was really best suited for descriptive statics (number of mines, type of ore extracted, mine location, etc.). In order to use the data, I would have to transform it into quantitative discrete data. I did this through manual one-hot encoding, creating individual variables for each mineral mined and recording a 1 for mineral present, a zero for not present. The data collection was relatively easy as I was able to download it from one site and the individual data sets had pretty much the same structure. The data difficulty level was also not too bad with simple row binding of the sets and some mess to the data. One of the columns was inconsistent with similar columns requiring it to be converted to factor. Data cleaning was moderate with removal of NAs from a lot of the columns. Data inspection (initial analysis/EDA) effort was also moderate revealing that transformations were necessary before real descriptive statistics or inferential statistics could be applied. Feature selection was a continuous process throughout the project to try to reduce the number of original variables. At times, I had to go back and revise the variable selection. Once I selected the variables, I had to engineer features (one hot encoding) from categorical to quantitative discrete. The project was coded in R but the feature engineering was done manually in LibreOffice Calc by writing out files and importing the manually created file with new features. I used multiple R libraries for the project. The machine learning methods I used for this project were SVM and logistic regression and I may have taken liberties that are not allowed for a data set such as I created.   
+
+I guess one could consider my use of a correlation map as giving some business insight into prospecting for gold. The logistic modelling resulted in low p values. Thus, I rejected the null hypothesis. The group differences were significant. The logistic model results indicate that the presence of silver is a predictor of gold while the presence of lead predicts the absence of gold. I do not feel real confident about the results that I got. I think that the SVM model is flexible enough that the results using quantitative discrete data are acceptable for silver and lead. SVM classification was 76% accurate. If I have done everything correctly, my prediction project goes like this: the groups are different, I prove it by running svm and it can create a hyperplane classifying the groups. Since the group differences are not due to chance, the logistic model does predict the occurrence of gold. However, this all rests on the premise that I have used the right data set with the right machine learning methods. I at least tried to stick to machine learning methods for non-parametric data.
+
+I do believe that this project did provide some business insight by showing where gold clusters were physically by mapping the mines in Google Earth Pro, by showing correlations between gold and other minerals, and by visualizing the occurence of gold with silver, lead, and other minerals.
+
+
+
+
+
 
 
 
